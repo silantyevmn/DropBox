@@ -2,6 +2,8 @@ package client;
 
 import library.Messages;
 import network.FileMessage;
+import org.apache.commons.compress.archivers.sevenz.CLI;
+import server.AuthService;
 import server.ClientThread;
 
 import javax.imageio.plugins.jpeg.JPEGHuffmanTable;
@@ -30,21 +32,22 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
     private JTextField textIP = new JTextField("localhost");
     private JTextField textPort = new JTextField("8189");
     private JButton btnStart = new JButton("Войти");
-    private JButton btnCancel=new JButton("Отмена");
+    private JButton btnCancel = new JButton("Отмена");
     private JTextField textLogin = new JTextField("nik1");
     private JPasswordField textPass = new JPasswordField("123");
-    private JTextField textNick=new JTextField("nickname");
+    private JTextField textNick = new JTextField("nickname");
     private JButton btnAddFile = new JButton("addFile");
     private JButton btnRemoveFile = new JButton("removeFile");
     private JButton btnSaveFile = new JButton("saveFile");
     private JList jList;
     private DefaultListModel listModel;
-    private JTextArea textLog = new JTextArea();;
+    private JTextArea textLog = new JTextArea();
+    ;
     private Client client;
     private JFrame loginGUI;
-    private Label lab_pass2,lab_nick;
+    private Label lab_pass2, lab_nick;
     private JPasswordField text_pass2;
-    private JRadioButton btn_radio_login,btn_radio_newLogin;
+    private JRadioButton btn_radio_login, btn_radio_newLogin;
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
@@ -54,30 +57,31 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
             }
         });
     }
-    private void setNewLogin(boolean flag){
+
+    private void setNewLogin(boolean flag) {
         text_pass2.setVisible(flag);
         lab_pass2.setVisible(flag);
         lab_nick.setVisible(flag);
         textNick.setVisible(flag);
     }
 
-    private void initClientLoginGUI(){
-        loginGUI=new JFrame();
-        loginGUI.setSize(400,200);
-        loginGUI.setTitle(WINDOW_TITLE+" подключение");
+    private void initClientLoginGUI() {
+        loginGUI = new JFrame();
+        loginGUI.setSize(400, 200);
+        loginGUI.setTitle(WINDOW_TITLE + " подключение");
         loginGUI.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         loginGUI.setLocationRelativeTo(null);
 
-        JPanel panelUp = new JPanel(new GridLayout(1,4));
+        JPanel panelUp = new JPanel(new GridLayout(1, 4));
         JLabel labIP = new JLabel("Введите адрес сервера");
         JLabel labPort = new JLabel("Введите порт");
         panelUp.add(labIP);
         panelUp.add(textIP);
         panelUp.add(labPort);
         panelUp.add(textPort);
-        loginGUI.add(panelUp,BorderLayout.PAGE_START);
+        loginGUI.add(panelUp, BorderLayout.PAGE_START);
 
-        JPanel jPanelLoginCenter=new JPanel(new GridLayout(5,2));
+        JPanel jPanelLoginCenter = new JPanel(new GridLayout(5, 2));
         ButtonGroup group = new ButtonGroup();
         btn_radio_login = new JRadioButton("Войти", true);
         btn_radio_newLogin = new JRadioButton("Новый пользователь", false);
@@ -88,34 +92,34 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         jPanelLoginCenter.add(btn_radio_newLogin);
         JLabel labLogin = new JLabel("Login");
         JLabel labPass = new JLabel("Password");
-        textLogin.setPreferredSize(new Dimension(100,20));
-        textPass.setPreferredSize(new Dimension(100,20));
+        textLogin.setPreferredSize(new Dimension(100, 20));
+        textPass.setPreferredSize(new Dimension(100, 20));
         jPanelLoginCenter.add(labLogin);
         jPanelLoginCenter.add(textLogin);
         jPanelLoginCenter.add(labPass);
         jPanelLoginCenter.add(textPass);
 
-        lab_pass2=new Label("повторите пароль");
-        text_pass2=new JPasswordField();
-        text_pass2.setPreferredSize(new Dimension(100,20));
+        lab_pass2 = new Label("повторите пароль");
+        text_pass2 = new JPasswordField();
+        text_pass2.setPreferredSize(new Dimension(100, 20));
         jPanelLoginCenter.add(lab_pass2);
         jPanelLoginCenter.add(text_pass2);
 
-        lab_nick=new Label("Введите ник");
-        textNick=new JTextField();
-        textNick.setPreferredSize(new Dimension(100,20));
+        lab_nick = new Label("Введите ник");
+        textNick = new JTextField();
+        textNick.setPreferredSize(new Dimension(100, 20));
         jPanelLoginCenter.add(lab_nick);
         jPanelLoginCenter.add(textNick);
 
         btn_radio_login.setEnabled(true);
         setNewLogin(btn_radio_newLogin.isSelected());
 
-        loginGUI.add(jPanelLoginCenter,BorderLayout.CENTER);
+        loginGUI.add(jPanelLoginCenter, BorderLayout.CENTER);
 
-        JPanel jPanel_button=new JPanel();
+        JPanel jPanel_button = new JPanel();
         jPanel_button.add(btnStart);
         jPanel_button.add(btnCancel);
-        loginGUI.add(jPanel_button,BorderLayout.PAGE_END);
+        loginGUI.add(jPanel_button, BorderLayout.PAGE_END);
 
         loginGUI.setVisible(true);
         btnStart.addActionListener(this);
@@ -130,7 +134,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         initClientLoginGUI();
     }
 
-    private void init(){
+    private void init() {
         setSize(WIDTH, HEIGHT);
         setTitle(WINDOW_TITLE);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -191,16 +195,19 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
     public void actionPerformed(ActionEvent e) {
         Object obj = e.getSource();
         if (obj == btnStart) {
-            //проверить все поля заполнены правильно
-            if(!isErrorFieldAuth()) {
+            //проверить все поля заполнены правильно на форме авторизации
+            String login = textLogin.getText();
+            String nickname = textNick.getText();
+            String pass1 = textPass.getText();
+            String pass2 = text_pass2.getText();
+            if (!AuthService.isErrorFieldAuth(client,login, nickname, pass1, pass2, btn_radio_newLogin.isSelected())) {
                 client.start(textIP.getText(), Integer.parseInt(textPort.getText()), timeout);
             } else client.stop();
-        }else if(obj==btn_radio_login) {
+        } else if (obj == btn_radio_login) {
             setNewLogin(false);
-        }else if(obj==btn_radio_newLogin) {
+        } else if (obj == btn_radio_newLogin) {
             setNewLogin(true);
-        }
-        else if(obj==btnCancel){
+        } else if (obj == btnCancel) {
             loginGUI.dispose();
             dispose();
         } else if (obj == btnAddFile) {
@@ -211,7 +218,7 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
             if (result == JFileChooser.APPROVE_OPTION) {
                 File file = open.getSelectedFile();
                 //отправить файл на сервер
-                FileMessage fileMessage=new FileMessage(file);
+                FileMessage fileMessage = new FileMessage(file);
                 client.getClientThread().sendMessage(fileMessage);
                 //client.clientThread.sendMessage(Messages.getFileclientProp(file.getName(), String.valueOf(file.length())));
             }
@@ -224,8 +231,8 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
             //сохрание файла на клиенте диск
             int userID = client.getClientThread().getFolder();
             String currentNameFile = jList.getSelectedValue().toString();
-            if(currentNameFile==null){
-                onSetJOptionPane("не выбран файл из списка","ошибка выбора",JOptionPane.OK_OPTION);
+            if (currentNameFile == null) {
+                onSetJOptionPane("не выбран файл из списка", "ошибка выбора", JOptionPane.OK_OPTION);
                 return;
             }
 
@@ -238,39 +245,10 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
             if (result == JFileChooser.APPROVE_OPTION) {
                 client.setFile(save.getSelectedFile());
                 //отправляем команду запроса файла с сервера
-                client.getClientThread().sendMessage(Messages.GET_FILE+Messages.DELIMITER+currentNameFile);
+                client.getClientThread().sendMessage(Messages.GET_FILE + Messages.DELIMITER + currentNameFile);
             }
 
         }
-    }
-
-    private boolean isErrorFieldAuth() {
-        String login=textLogin.getText();
-        String nickname=textNick.getText();
-        String pass1=textPass.getText();
-        String pass2=text_pass2.getText();
-
-        if(btn_radio_newLogin.isSelected()){
-            if(!pass1.equals(pass2)){
-                putLog("Пароли не совпадают");
-                return true;
-            }
-            if(login.length()<2 || pass1.length()<2){
-                putLog("Логин/пароль не может быть менее 2-х символов");
-                return true;
-            }
-            if(nickname.length()<2){
-                putLog("Ник не может быть менее 2-х символов");
-                return true;
-            }
-
-        } else {
-            if(login.length()<2 || pass1.length()<2){
-                putLog("Логин/пароль не может быть менее 2-х символов");
-                return true;
-            }
-        }
-        return false;
     }
 
     @Override
@@ -297,9 +275,8 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
 
     @Override
     public void getAuthRequest(ClientThread clientThread) {
-        if(btn_radio_newLogin.isSelected()){
-            clientThread.sendMessage(Messages.getAuthNewperson(textLogin.getText(),textPass.getText(),textNick.getText()));
-            //clientThread.sendMessage(Messages.getAuthNewperson("test1","123","test1"));
+        if (btn_radio_newLogin.isSelected()) {
+            clientThread.sendMessage(Messages.getAuthNewperson(textLogin.getText(), textPass.getText(), textNick.getText()));
         } else {
             clientThread.sendMessage(Messages.getAuthRequest(textLogin.getText(), textPass.getText()));
         }
@@ -308,12 +285,12 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
 
     @Override
     public void onSetJOptionPane(String msg, String title, int optionPanel) {
-        JOptionPane.showMessageDialog(this,msg,title,optionPanel);
+        JOptionPane.showMessageDialog(this, msg, title, optionPanel);
     }
 
     @Override
-    public void onError(Thread t,Exception e) {
-        uncaughtException(t,e);
+    public void onError(Thread t, Exception e) {
+        uncaughtException(t, e);
     }
 
     @Override
