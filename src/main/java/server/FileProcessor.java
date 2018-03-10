@@ -49,4 +49,9 @@ public class FileProcessor {
     synchronized static File getFile(int userID, String nameFile) {
         return new File(DIR+userID+File.separator+nameFile);
     }
+    synchronized static boolean setNewFolder(String folder){
+        String fullName = DIR + folder;
+        File dir = new File(fullName);
+        return dir.mkdir();
+    }
 }
