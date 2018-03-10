@@ -1,8 +1,9 @@
 package server;
 
+import client.Client;
+import com.sun.deploy.util.SessionState;
 import library.Messages;
-
-import java.io.File;
+import org.apache.commons.compress.archivers.sevenz.CLI;
 
 /**
  * server
@@ -33,23 +34,44 @@ public class AuthService {
             if (SqlClient.setNewPerson(login, pass, nickname)) {
                 String folder = SqlClient.getUserID(nickname);
                 //создаем папку для пользователя
-                String fullName = "src/main/resources/" + folder;
-                File dir = new File(fullName);
-                if (dir.mkdir()) {
+                if (FileProcessor.setNewFolder(folder)) {
+                    // отправляем сообщение новый пользователь успешно создался
                     System.out.println("Каталог успешно создан");
+                    return Messages.getAuthNewpersonOk(nickname, folder);
+                } else {
+                    //ошибка при создании нового пользователя
+                    System.out.println("Каталог не создан!");
+                    return Messages.getAuthNewpersonError();
                 }
-                // отправляем сообщение новый пользователь успешно создался
-
-                return Messages.getAuthNewpersonOk(nickname, folder);
-            } else {
-                //ошибка при создании нового пользователя
-                return Messages.getAuthNewpersonError();
             }
-        } else {
-            // если занят отправляем сообщение логин занят
-            return Messages.getAuthNewpersonOff();
         }
+        // если занят отправляем сообщение логин занят
+        return Messages.getAuthNewpersonOff();
 
+    }
+
+    public synchronized static boolean isErrorFieldAuth(Client client,String login, String nickname, String pass1, String pass2, boolean isNewLogin){
+        if(isNewLogin){
+            if(!pass1.equals(pass2)){
+                client.putLog("Пароли не совпадают");
+                return true;
+            }
+            if(login.length()<2 || pass1.length()<2){
+                client.putLog("Логин/пароль не может быть менее 2-х символов");
+                return true;
+            }
+            if(nickname.length()<2){
+                client.putLog("Ник не может быть менее 2-х символов");
+                return true;
+            }
+
+        } else {
+            if(login.length()<2 || pass1.length()<2){
+                client.putLog("Логин/пароль не может быть менее 2-х символов");
+                return true;
+            }
+        }
+        return false;
     }
 
 }
